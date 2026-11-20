@@ -21,6 +21,7 @@ export default function Communities() {
         </Link>
       }
     >
+      <div className="community-hero"><span className="hero-eyebrow">FIND YOUR PEOPLE</span><h2>Better together.</h2><p>Discover shared passions, exchange ideas, and build something meaningful.</p><Link className="hero-primary" href="/search"><Icon name="search" size={18} /> Explore Sangam</Link></div>
       <div className="sec-h">Your communities</div>
       <div className="pad stack" style={{ paddingTop: 0 }}>
         {mine.length ? mine.map((c) => <CommunityCard key={c.id} c={c} />) : <p className="meta">You have not joined any community yet.</p>}
