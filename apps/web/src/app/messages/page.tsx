@@ -20,6 +20,7 @@ function Inbox() {
 
   return (
     <Screen title={translate(state.prefs.lang, "messages")}>
+      <div className="inbox-hero"><span className="inbox-hero-icon">✉</span><div><h2>Conversations that matter.</h2><p>Keep your connections close, one message at a time.</p></div></div>
       <Seg<Tab>
         label="Messages"
         options={[
@@ -31,7 +32,7 @@ function Inbox() {
       />
       {tab === "chats" ? (
         chats.length ? (
-          <div className="list">
+          <div className="list inbox-list">
             {chats.map((c) => {
               const last = c.messages.at(-1);
               const u = state.users[c.with];
