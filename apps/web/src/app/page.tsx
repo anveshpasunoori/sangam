@@ -29,12 +29,26 @@ export default function Home() {
     <>
       <HomeHeader />
       <Screen title="" bare>
-        <div className="feed-intro"><h2>Your space, your people.</h2><p>Discover conversations that bring us closer.</p></div>
+        <section className="sangam-hero" aria-label="Welcome to Sangam">
+          <div className="hero-orb hero-orb-one" aria-hidden="true" />
+          <div className="hero-orb hero-orb-two" aria-hidden="true" />
+          <div className="sangam-hero-content">
+            <span className="hero-eyebrow"><span className="hero-live-dot" /> YOUR COMMUNITY, YOUR VOICE</span>
+            <h2>Good things happen<br />when we <em>connect.</em></h2>
+            <p>A more meaningful place to share your world, find your people, and make a difference.</p>
+            <div className="hero-actions">
+              <Link href="/create" className="hero-primary"><Icon name="plus" size={18} /> Share a moment</Link>
+              <Link href="/communities" className="hero-secondary"><Icon name="groups" size={18} /> Explore communities</Link>
+            </div>
+          </div>
+          <div className="hero-decoration" aria-hidden="true"><span>✦</span><span>✳</span><span>✦</span></div>
+        </section>
         <div className="feed-compose">
           <Avatar user={state.users.me} size={42} />
           <Link href="/create" className="feed-compose-link">What’s on your mind?</Link>
           <Link href="/create" className="icon" aria-label="Create post"><Icon name="plus" /></Link>
         </div>
+        <div className="feed-section-label"><span>Moments from your circle</span><Link href="/search">Discover people <Icon name="back" size={14} /></Link></div>
         <div className="stories" aria-label="Stories">
           {state.stories.map((s, i) => {
             const u = state.users[s.by];
@@ -49,6 +63,7 @@ export default function Home() {
             );
           })}
         </div>
+        <div className="feed-section-label feed-section-label-posts"><span>Latest conversations</span><span className="feed-section-subtitle">Stay in the loop</span></div>
         <Seg<FeedMode>
           label="Feed"
           options={[
