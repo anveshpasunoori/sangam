@@ -25,7 +25,7 @@ export function PostCard({ post: p, showWhy = false }: { post: Post; showWhy?: b
           <Avatar user={u} />
           <span className="col">
             <b>
-              {u.name} {u.verified && <span className="chip t">Verified</span>}
+              {u.name} {u.verified && <span className="verified-marker" title="Verified account" aria-label="Verified account"><Icon name="check" size={12} stroke={3} /></span>}
             </b>
             <span className="meta">
               @{u.handle} · {ago(p)} · {p.audience}
