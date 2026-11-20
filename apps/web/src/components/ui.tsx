@@ -58,19 +58,20 @@ export function Icon({ name, size = 22, stroke = 1.8 }: { name: IconName; size?:
   );
 }
 
-/* ---------- brand mark: two streams meeting at a saffron point ---------- */
+/* ---------- brand: three connected people forming a sangam ---------- */
 export function Mark({ size = 26 }: { size?: number }) {
   return (
-    <svg className="mark" width={size} height={size} viewBox="0 0 26 26" aria-hidden="true">
-      <path d="M2 6c7 0 9 7 11 7s4-7 11-7" fill="none" strokeWidth="3" strokeLinecap="round" style={{ stroke: "var(--primary)" }} />
-      <path d="M2 20c7 0 9-7 11-7s4 7 11 7" fill="none" strokeWidth="3" strokeLinecap="round" style={{ stroke: "var(--teal)" }} />
-      <circle cx="13" cy="13" r="2.6" fill="#F2A33A" />
+    <svg className="mark" width={size} height={size} viewBox="0 0 48 48" fill="none" aria-hidden="true">
+      <rect width="48" height="48" rx="14" fill="#4938B7" />
+      <path d="M12 16C18 16 18 25 24 25S30 16 36 16" stroke="#FFFFFF" strokeWidth="4" strokeLinecap="round" />
+      <path d="M12 32C18 32 18 23 24 23S30 32 36 32" stroke="#8FF1D5" strokeWidth="4" strokeLinecap="round" />
+      <circle cx="24" cy="24" r="4.5" fill="#FFD27A" stroke="#4938B7" strokeWidth="1.5" />
     </svg>
   );
 }
 
 /* ---------- avatar ---------- */
-const HUES = ["#2A3BA8", "#0A6F6B", "#9A5200", "#7A2E8E", "#A8231C", "#1F6F9C", "#4A6B1E", "#8A3B5E"];
+const HUES = ["#5848C8", "#167F80", "#B87943", "#9163B6", "#BE6079", "#447BA8", "#60866A", "#A15E8E"];
 
 export function Avatar({ user, size = 40 }: { user: Pick<User, "name" | "hue">; size?: number }) {
   const initials = user.name
@@ -91,10 +92,10 @@ export function Avatar({ user, size = 40 }: { user: Pick<User, "name" | "hue">; 
 
 /* ---------- original illustrations drawn from the palette ---------- */
 const PALETTES = [
-  ["#2A3BA8", "#96A4FF", "#F2A33A", "#E3E6FA"],
-  ["#0A6F6B", "#56D3CA", "#F2A33A", "#D8F0EE"],
-  ["#3A2A6E", "#B79CF0", "#F2A33A", "#EEE6FB"],
-  ["#12142B", "#2A3BA8", "#F2A33A", "#56D3CA"],
+  ["#4938B7", "#A89FF5", "#FFCA78", "#EAE7FF"],
+  ["#166D70", "#7DDCCB", "#F6C57C", "#E1F5F0"],
+  ["#63419A", "#C5A7F0", "#F5C77E", "#F1EAFB"],
+  ["#28375D", "#6589C5", "#F5C77E", "#9ED9D2"],
 ];
 
 export function Art({ kind, hue = 0, animated = false }: { kind: ArtKind; hue?: number; animated?: boolean }) {
