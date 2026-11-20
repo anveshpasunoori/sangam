@@ -58,20 +58,20 @@ export function Icon({ name, size = 22, stroke = 1.8 }: { name: IconName; size?:
   );
 }
 
-/* ---------- brand: three connected people forming a sangam ---------- */
+/* ---------- Sangam: two connections meeting, one community ---------- */
 export function Mark({ size = 26 }: { size?: number }) {
   return (
     <svg className="mark" width={size} height={size} viewBox="0 0 48 48" fill="none" aria-hidden="true">
-      <rect width="48" height="48" rx="14" fill="#4938B7" />
+      <rect width="48" height="48" rx="14" fill="#2563EB" />
       <path d="M12 16C18 16 18 25 24 25S30 16 36 16" stroke="#FFFFFF" strokeWidth="4" strokeLinecap="round" />
-      <path d="M12 32C18 32 18 23 24 23S30 32 36 32" stroke="#8FF1D5" strokeWidth="4" strokeLinecap="round" />
-      <circle cx="24" cy="24" r="4.5" fill="#FFD27A" stroke="#4938B7" strokeWidth="1.5" />
+      <path d="M12 32C18 32 18 23 24 23S30 32 36 32" stroke="#99F6E4" strokeWidth="4" strokeLinecap="round" />
+      <circle cx="24" cy="24" r="4.5" fill="#FFFFFF" stroke="#2563EB" strokeWidth="1.5" />
     </svg>
   );
 }
 
 /* ---------- avatar ---------- */
-const HUES = ["#5848C8", "#167F80", "#B87943", "#9163B6", "#BE6079", "#447BA8", "#60866A", "#A15E8E"];
+const HUES = ["#2563EB", "#0D9488", "#D97706", "#7C3AED", "#DB2777", "#0284C7", "#16A34A", "#BE185D"];
 
 export function Avatar({ user, size = 40 }: { user: Pick<User, "name" | "hue">; size?: number }) {
   const initials = user.name
@@ -92,10 +92,10 @@ export function Avatar({ user, size = 40 }: { user: Pick<User, "name" | "hue">; 
 
 /* ---------- original illustrations drawn from the palette ---------- */
 const PALETTES = [
-  ["#4938B7", "#A89FF5", "#FFCA78", "#EAE7FF"],
-  ["#166D70", "#7DDCCB", "#F6C57C", "#E1F5F0"],
-  ["#63419A", "#C5A7F0", "#F5C77E", "#F1EAFB"],
-  ["#28375D", "#6589C5", "#F5C77E", "#9ED9D2"],
+  ["#2563EB", "#93C5FD", "#FBBF24", "#EFF6FF"],
+  ["#0F766E", "#5EEAD4", "#FBBF24", "#F0FDFA"],
+  ["#6366F1", "#A5B4FC", "#FBBF24", "#EEF2FF"],
+  ["#334155", "#7DD3FC", "#FBBF24", "#E0F2FE"],
 ];
 
 export function Art({ kind, hue = 0, animated = false }: { kind: ArtKind; hue?: number; animated?: boolean }) {
