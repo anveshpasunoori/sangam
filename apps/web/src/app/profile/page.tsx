@@ -43,9 +43,10 @@ function ProfileInner() {
         </Link>
       }
     >
-      <div className="pad stack" style={{ background: "var(--surface)" }}>
+      <div className="profile-cover" aria-hidden="true"><div className="profile-cover-glow" /><span>MY SANGAM SPACE</span></div>
+      <div className="pad stack profile-summary" style={{ background: "var(--surface)" }}>
         <div className="row g16">
-          <Avatar user={me} size={72} />
+          <span className="profile-avatar"><Avatar user={me} size={88} /></span>
           <div className="row g16 sp" style={{ justifyContent: "space-around", textAlign: "center" }}>
             {[
               [mine.length, "Posts"],
@@ -60,7 +61,8 @@ function ProfileInner() {
           </div>
         </div>
         <div>
-          <h2>{me.name}</h2>
+          <h2 className="profile-name">{me.name}</h2>
+          <span className="meta">@{me.handle} · Your corner of Sangam</span>
           <p>{me.bio}</p>
         </div>
         <div className="row g8">
