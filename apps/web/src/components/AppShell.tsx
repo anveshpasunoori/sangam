@@ -105,11 +105,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           <span className="chip s" style={{ alignSelf: "flex-start" }}>
             Early build · fictional data
           </span>
-          <div className="tag">Connect. Create. Belong. Be Heard.</div>
-          <p className="meta">
-            A trust-first social and civic network for India. Everything runs in your browser; nothing is sent to a server, and every
-            person, place and figure is invented.
-          </p>
+          <div className="tag">A space where every voice belongs.</div>
+          <p className="meta">Connect with people, discover communities, and make your voice count. This preview uses fictional local data only.</p>
         </div>
         <Link href="/civic" className="card stack rail-civic">
           <span className="row g8" style={{ color: "var(--teal)" }}>
