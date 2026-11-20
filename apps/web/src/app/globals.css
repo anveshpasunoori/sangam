@@ -396,3 +396,23 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
 }
 @media(prefers-reduced-motion:reduce) { .hero-primary:hover { transform:none; } }
 .reduced .hero-primary:hover { transform:none; }
+
+/* Brand system v2: unified purple, sea-glass and warm-gold accents. */
+:root { --bg:#f7f8fc; --surface:#fff; --surface2:#f0f2fa; --ink:#1d2440; --ink2:#58647b; --line:#e3e7f1; --primary:#4938b7; --primary-soft:#edeaff; --teal:#137775; --teal-soft:#e1f5ef; --saffron:#88500f; --saffron-fill:#efae53; --saffron-soft:#fff1d9; --elevation:0 10px 32px rgba(33,37,91,.065); }
+:root[data-theme="dark"] { --bg:#101727; --surface:#192137; --surface2:#242d46; --ink:#f4f6ff; --ink2:#b9c3d7; --line:#35405a; --primary:#b9b0ff; --primary-soft:#34305b; --teal:#85e1d0; --teal-soft:#193f42; --saffron:#f9cf8c; --saffron-soft:#47341f; --elevation:0 10px 32px rgba(0,0,0,.22); }
+@media(prefers-color-scheme:dark) { :root:not([data-theme="light"]) { --bg:#101727; --surface:#192137; --surface2:#242d46; --ink:#f4f6ff; --ink2:#b9c3d7; --line:#35405a; --primary:#b9b0ff; --primary-soft:#34305b; --teal:#85e1d0; --teal-soft:#193f42; --saffron:#f9cf8c; --saffron-soft:#47341f; --elevation:0 10px 32px rgba(0,0,0,.22); } }
+.mark { flex-shrink:0; filter:drop-shadow(0 3px 7px rgba(73,56,183,.15)); }
+#side .logo, .top .logo { gap:11px; color:var(--ink); font-weight:800; letter-spacing:-.055em; }
+#side .logo .mark { width:38px; height:38px; }
+.top .logo .mark { width:32px; height:32px; }
+.verified-marker { display:inline-grid; place-items:center; vertical-align:middle; width:17px; height:17px; margin-left:3px; border-radius:50%; background:#4938b7; color:#fff; }
+.post .av,.stories .av,.profile-avatar .av { box-shadow:inset 0 0 0 1px rgba(255,255,255,.18); }
+.ring { border-color:#7c64db; }
+.ring.seen { border-color:var(--line); }
+#tabs a[aria-current="page"] { color:var(--primary); }
+#tabs a[aria-current="page"]::after { content:""; width:5px; height:5px; border-radius:50%; background:var(--primary); position:absolute; bottom:4px; }
+#tabs a { position:relative; }
+.chip.t { background:var(--teal-soft); color:var(--teal); }
+.hero-primary:focus-visible,.hero-secondary:focus-visible { outline-color:#fff; }
+.post .art { background:var(--surface2); }
+.post .art svg { display:block; }
