@@ -416,3 +416,46 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
 .hero-primary:focus-visible,.hero-secondary:focus-visible { outline-color:#fff; }
 .post .art { background:var(--surface2); }
 .post .art svg { display:block; }
+
+/* Community-first contemporary system: clean neutrals, social blue, civic teal. */
+:root {
+  --bg:#f8fafc; --surface:#ffffff; --surface2:#f1f5f9; --ink:#0f172a; --ink2:#475569; --line:#e2e8f0;
+  --primary:#2563eb; --on-primary:#ffffff; --primary-soft:#eff6ff;
+  --teal:#0f766e; --teal-soft:#ccfbf1; --saffron:#92400e; --saffron-fill:#f59e0b; --saffron-soft:#fef3c7;
+  --elevation:0 4px 20px rgba(15,23,42,.045); --r1:10px; --r2:16px; --r3:22px;
+}
+:root[data-theme="dark"] {
+  --bg:#0b1220; --surface:#111c2e; --surface2:#1e293b; --ink:#f8fafc; --ink2:#cbd5e1; --line:#334155;
+  --primary:#93c5fd; --on-primary:#0b1220; --primary-soft:#1e3a5f; --teal:#5eead4; --teal-soft:#134e4a;
+  --saffron:#fcd34d; --saffron-soft:#45321a; --elevation:0 4px 20px rgba(0,0,0,.15);
+}
+@media(prefers-color-scheme:dark) {
+  :root:not([data-theme="light"]) {
+    --bg:#0b1220; --surface:#111c2e; --surface2:#1e293b; --ink:#f8fafc; --ink2:#cbd5e1; --line:#334155;
+    --primary:#93c5fd; --on-primary:#0b1220; --primary-soft:#1e3a5f; --teal:#5eead4; --teal-soft:#134e4a;
+    --saffron:#fcd34d; --saffron-soft:#45321a; --elevation:0 4px 20px rgba(0,0,0,.15);
+  }
+}
+.sangam-hero { min-height:0; padding:29px 30px; background:linear-gradient(115deg,#1d4ed8 0%,#2563eb 60%,#0891b2 100%); }
+.sangam-hero h2 { font-size:clamp(1.9rem,3.8vw,2.65rem); margin:13px 0 10px; }
+.sangam-hero h2 em { color:#ccfbf1; }
+.sangam-hero p { color:#eff6ff; }
+.hero-eyebrow { color:#dbeafe; }
+.hero-orb-one { background:radial-gradient(circle,rgba(255,255,255,.16),transparent 70%); }
+.hero-orb-two { background:radial-gradient(circle,rgba(94,234,212,.25),transparent 70%); }
+.hero-decoration { opacity:.4; }
+.hero-primary { color:#1d4ed8; }
+.hero-primary:hover { background:#eff6ff; }
+.community-hero { background:linear-gradient(115deg,#0f766e,#0d9488); }
+.community-hero .hero-primary { color:#0f766e; }
+.profile-cover { background:linear-gradient(115deg,#1d4ed8,#0e7490); }
+.inbox-hero-icon { background:#2563eb; color:#fff; }
+.verified-marker { background:#2563eb; color:#fff; }
+.ring { border-color:#2563eb; }
+.mark { filter:none; }
+.btn { box-shadow:none; }
+.btn:hover:not([disabled]) { filter:none; }
+.card { box-shadow:var(--elevation); }
+.post { box-shadow:var(--elevation); }
+@media(min-width:760px) { .sangam-hero { border-radius:18px; } .post { border-radius:16px; } }
+@media(max-width:520px) { .sangam-hero { padding:25px 20px; } .sangam-hero h2 { font-size:2rem; } }
