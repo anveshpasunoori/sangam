@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.sangam.example/events/envelope.schema.json",
+  "title": "Sangam event envelope",
+  "description": "Every domain event published from platform.outbox. Payloads carry ids and facts, never private message text or original civic evidence.",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "occurred_at",
+    "aggregate",
+    "data"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique event id (platform.outbox.event_id); consumers de-duplicate on it."
+    },
+    "type": {
+      "type": "string",
+      "pattern": "^[a-z]+(\\.[a-z_]+)+\\.v[0-9]+$"
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "aggregate": {
+      "type": "object",
+      "required": [
+        "type",
+        "id"
+      ],
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "trace_id": {
+      "type": "string",
+      "description": "OpenTelemetry trace id, when available."
+    },
+    "data": {
+      "type": "object"
+    }
+  }
+}

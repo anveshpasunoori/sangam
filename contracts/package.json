@@ -1,0 +1,25 @@
+{
+  "name": "@sangam/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Sangam stage E contracts: PostgreSQL migrations, OpenAPI, event schemas, state machines.",
+  "scripts": {
+    "db:up": "node scripts/db.mjs up",
+    "db:down": "node scripts/db.mjs down",
+    "migrate": "node scripts/migrate.mjs",
+    "lint:openapi": "redocly lint openapi/sangam.yaml --config redocly.yaml",
+    "test": "vitest run",
+    "check": "npm run lint:openapi && npm run db:up && npm test",
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "devDependencies": {
+    "@redocly/cli": "^2.82.0",
+    "@types/pg": "^8.23.1",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
+    "pg": "^8.23.1",
+    "vitest": "^5.1.1",
+    "yaml": "^2.9.1"
+  }
+}

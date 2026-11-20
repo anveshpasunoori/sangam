@@ -1,0 +1,16 @@
+{
+  "name": "sangam",
+  "private": true,
+  "description": "Sangam monorepo: web app and contracts.",
+  "workspaces": [
+    "apps/*",
+    "contracts"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @sangam/web",
+    "build": "npm run build -w @sangam/web",
+    "test": "npm test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "contracts:check": "npm run check -w @sangam/contracts"
+  }
+}

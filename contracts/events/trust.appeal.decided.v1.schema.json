@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.sangam.example/events/trust.appeal.decided.v1.schema.json",
+  "title": "trust.appeal.decided.v1",
+  "description": "A human reviewer decided an appeal.",
+  "allOf": [
+    {
+      "$ref": "envelope.schema.json"
+    }
+  ],
+  "properties": {
+    "type": {
+      "const": "trust.appeal.decided.v1"
+    },
+    "aggregate": {
+      "properties": {
+        "type": {
+          "const": "appeal"
+        }
+      }
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "appeal_id",
+        "enforcement_id",
+        "outcome",
+        "decided_at"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "appeal_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "enforcement_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "outcome": {
+          "enum": [
+            "upheld",
+            "reversed"
+          ]
+        },
+        "decided_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "id": "e0e0e0e0-0000-4000-8000-000000000009",
+      "type": "trust.appeal.decided.v1",
+      "occurred_at": "2026-11-20T09:15:00Z",
+      "aggregate": {
+        "type": "appeal",
+        "id": "see-data"
+      },
+      "data": {
+        "appeal_id": "9e8d7c6b-0000-4000-8000-000000000501",
+        "enforcement_id": "9e8d7c6b-0000-4000-8000-000000000401",
+        "outcome": "reversed",
+        "decided_at": "2026-11-14T11:00:00Z"
+      }
+    }
+  ]
+}

@@ -1,0 +1,181 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.sangam.example/events/civic.case.transitioned.v1.schema.json",
+  "title": "civic.case.transitioned.v1",
+  "description": "A civic case event was recorded (a transition, or a side event such as escalate). Mirrors civic.case_events.",
+  "allOf": [
+    {
+      "$ref": "envelope.schema.json"
+    }
+  ],
+  "properties": {
+    "type": {
+      "const": "civic.case.transitioned.v1"
+    },
+    "aggregate": {
+      "properties": {
+        "type": {
+          "const": "civic_case"
+        }
+      }
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "case_id",
+        "ref",
+        "seq",
+        "action",
+        "from_state",
+        "to_state",
+        "actor_kind",
+        "escalated"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "case_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "ref": {
+          "type": "string",
+          "pattern": "^SGM-C-[0-9]{4,}$"
+        },
+        "seq": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "action": {
+          "enum": [
+            "acknowledge",
+            "add_evidence",
+            "add_note",
+            "close",
+            "confirm_fixed",
+            "confirm_not_fixed",
+            "escalate",
+            "mark_duplicate",
+            "reject",
+            "reopen",
+            "report_progress",
+            "request_confirmation",
+            "respond",
+            "route",
+            "start_routing",
+            "submit",
+            "triage",
+            "withdraw"
+          ]
+        },
+        "from_state": {
+          "enum": [
+            "DRAFT",
+            "SUBMITTED",
+            "TRIAGED",
+            "ROUTING_PENDING",
+            "ROUTED",
+            "ACKNOWLEDGED",
+            "IN_PROGRESS",
+            "RESPONSE_RECEIVED",
+            "RESOLUTION_REVIEW",
+            "RESOLVED",
+            "UNRESOLVED",
+            "CLOSED",
+            "WITHDRAWN",
+            "REJECTED",
+            "DUPLICATE",
+            "REOPENED"
+          ]
+        },
+        "to_state": {
+          "oneOf": [
+            {
+              "enum": [
+                "DRAFT",
+                "SUBMITTED",
+                "TRIAGED",
+                "ROUTING_PENDING",
+                "ROUTED",
+                "ACKNOWLEDGED",
+                "IN_PROGRESS",
+                "RESPONSE_RECEIVED",
+                "RESOLUTION_REVIEW",
+                "RESOLVED",
+                "UNRESOLVED",
+                "CLOSED",
+                "WITHDRAWN",
+                "REJECTED",
+                "DUPLICATE",
+                "REOPENED"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "actor_kind": {
+          "enum": [
+            "complainant",
+            "platform",
+            "authority"
+          ]
+        },
+        "official_source_id": {
+          "oneOf": [
+            {
+              "type": "string",
+              "format": "uuid"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "escalated": {
+          "type": "boolean"
+        }
+      },
+      "if": {
+        "properties": {
+          "actor_kind": {
+            "const": "authority"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "official_source_id"
+        ],
+        "properties": {
+          "official_source_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "id": "e0e0e0e0-0000-4000-8000-000000000010",
+      "type": "civic.case.transitioned.v1",
+      "occurred_at": "2026-11-20T09:15:00Z",
+      "aggregate": {
+        "type": "civic_case",
+        "id": "see-data"
+      },
+      "data": {
+        "case_id": "c1c1c1c1-0000-4000-8000-000000000601",
+        "ref": "SGM-C-1042",
+        "seq": 7,
+        "action": "confirm_not_fixed",
+        "from_state": "RESOLUTION_REVIEW",
+        "to_state": "UNRESOLVED",
+        "actor_kind": "complainant",
+        "official_source_id": null,
+        "escalated": false
+      }
+    }
+  ]
+}

@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.sangam.example/events/messaging.message.sent.v1.schema.json",
+  "title": "messaging.message.sent.v1",
+  "description": "A message was stored. Metadata only: no body or ciphertext ever leaves the messaging context in events.",
+  "allOf": [
+    {
+      "$ref": "envelope.schema.json"
+    }
+  ],
+  "properties": {
+    "type": {
+      "const": "messaging.message.sent.v1"
+    },
+    "aggregate": {
+      "properties": {
+        "type": {
+          "const": "conversation"
+        }
+      }
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "conversation_id",
+        "message_id",
+        "seq",
+        "sender_id",
+        "recipient_ids"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "conversation_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "message_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "seq": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sender_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "recipient_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "minItems": 1
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "id": "e0e0e0e0-0000-4000-8000-000000000006",
+      "type": "messaging.message.sent.v1",
+      "occurred_at": "2026-11-20T09:15:00Z",
+      "aggregate": {
+        "type": "conversation",
+        "id": "see-data"
+      },
+      "data": {
+        "conversation_id": "5c1e0d6a-0000-4000-8000-000000000201",
+        "message_id": "5c1e0d6a-0000-4000-8000-000000000202",
+        "seq": 42,
+        "sender_id": "6f2b6a0e-1d0c-4c3a-9a51-2b1f1f1f0001",
+        "recipient_ids": [
+          "6f2b6a0e-1d0c-4c3a-9a51-2b1f1f1f0003"
+        ]
+      }
+    }
+  ]
+}

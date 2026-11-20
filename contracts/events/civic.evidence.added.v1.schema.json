@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.sangam.example/events/civic.evidence.added.v1.schema.json",
+  "title": "civic.evidence.added.v1",
+  "description": "Evidence was attached. Carries the hash, never the file or its storage key.",
+  "allOf": [
+    {
+      "$ref": "envelope.schema.json"
+    }
+  ],
+  "properties": {
+    "type": {
+      "const": "civic.evidence.added.v1"
+    },
+    "aggregate": {
+      "properties": {
+        "type": {
+          "const": "civic_case"
+        }
+      }
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "case_id",
+        "evidence_id",
+        "version",
+        "sha256",
+        "byte_size",
+        "mime_type"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "case_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "evidence_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "replaces_id": {
+          "oneOf": [
+            {
+              "type": "string",
+              "format": "uuid"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "byte_size": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "mime_type": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "id": "e0e0e0e0-0000-4000-8000-000000000011",
+      "type": "civic.evidence.added.v1",
+      "occurred_at": "2026-11-20T09:15:00Z",
+      "aggregate": {
+        "type": "civic_case",
+        "id": "see-data"
+      },
+      "data": {
+        "case_id": "c1c1c1c1-0000-4000-8000-000000000601",
+        "evidence_id": "c1c1c1c1-0000-4000-8000-000000000602",
+        "version": 1,
+        "replaces_id": null,
+        "sha256": "b71a00000000000000000000000000000000000000000000000000000000e902",
+        "byte_size": 2516582,
+        "mime_type": "image/jpeg"
+      }
+    }
+  ]
+}

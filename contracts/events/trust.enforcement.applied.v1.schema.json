@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.sangam.example/events/trust.enforcement.applied.v1.schema.json",
+  "title": "trust.enforcement.applied.v1",
+  "description": "An enforcement action was recorded. Always names the policy and the kind of decider.",
+  "allOf": [
+    {
+      "$ref": "envelope.schema.json"
+    }
+  ],
+  "properties": {
+    "type": {
+      "const": "trust.enforcement.applied.v1"
+    },
+    "aggregate": {
+      "properties": {
+        "type": {
+          "const": "enforcement"
+        }
+      }
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "enforcement_id",
+        "target_kind",
+        "target_id",
+        "subject_account_id",
+        "action",
+        "policy_code",
+        "decider_kind"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "enforcement_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "target_kind": {
+          "enum": [
+            "post",
+            "comment",
+            "message",
+            "account",
+            "community",
+            "civic_case"
+          ]
+        },
+        "target_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "subject_account_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "action": {
+          "enum": [
+            "hide",
+            "remove",
+            "hold",
+            "restrict_reach",
+            "suspend_account",
+            "restore",
+            "publish"
+          ]
+        },
+        "policy_code": {
+          "type": "string"
+        },
+        "decider_kind": {
+          "enum": [
+            "automated",
+            "human"
+          ]
+        }
+      },
+      "not": {
+        "properties": {
+          "decider_kind": {
+            "const": "automated"
+          },
+          "action": {
+            "const": "suspend_account"
+          }
+        },
+        "required": [
+          "decider_kind",
+          "action"
+        ]
+      }
+    }
+  },
+  "examples": [
+    {
+      "id": "e0e0e0e0-0000-4000-8000-000000000008",
+      "type": "trust.enforcement.applied.v1",
+      "occurred_at": "2026-11-20T09:15:00Z",
+      "aggregate": {
+        "type": "enforcement",
+        "id": "see-data"
+      },
+      "data": {
+        "enforcement_id": "9e8d7c6b-0000-4000-8000-000000000401",
+        "target_kind": "comment",
+        "target_id": "9e8d7c6b-0000-4000-8000-000000000402",
+        "subject_account_id": "6f2b6a0e-1d0c-4c3a-9a51-2b1f1f1f0001",
+        "action": "hide",
+        "policy_code": "harassment",
+        "decider_kind": "automated"
+      }
+    }
+  ]
+}

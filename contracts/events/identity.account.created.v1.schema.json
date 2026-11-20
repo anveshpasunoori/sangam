@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.sangam.example/events/identity.account.created.v1.schema.json",
+  "title": "identity.account.created.v1",
+  "description": "An account was created.",
+  "allOf": [
+    {
+      "$ref": "envelope.schema.json"
+    }
+  ],
+  "properties": {
+    "type": {
+      "const": "identity.account.created.v1"
+    },
+    "aggregate": {
+      "properties": {
+        "type": {
+          "const": "account"
+        }
+      }
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "account_id",
+        "handle",
+        "ui_lang"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "account_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "handle": {
+          "type": "string"
+        },
+        "ui_lang": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "id": "e0e0e0e0-0000-4000-8000-000000000001",
+      "type": "identity.account.created.v1",
+      "occurred_at": "2026-11-20T09:15:00Z",
+      "aggregate": {
+        "type": "account",
+        "id": "see-data"
+      },
+      "data": {
+        "account_id": "6f2b6a0e-1d0c-4c3a-9a51-2b1f1f1f0001",
+        "handle": "arjun.demo",
+        "ui_lang": "en"
+      }
+    }
+  ]
+}

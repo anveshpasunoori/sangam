@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.sangam.example/events/content.post.audience_changed.v1.schema.json",
+  "title": "content.post.audience_changed.v1",
+  "description": "A post's audience changed. Caches and search must re-evaluate visibility.",
+  "allOf": [
+    {
+      "$ref": "envelope.schema.json"
+    }
+  ],
+  "properties": {
+    "type": {
+      "const": "content.post.audience_changed.v1"
+    },
+    "aggregate": {
+      "properties": {
+        "type": {
+          "const": "post"
+        }
+      }
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "post_id",
+        "author_id",
+        "from",
+        "to"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "post_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "author_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "from": {
+          "enum": [
+            "public",
+            "friends",
+            "close_friends",
+            "only_me"
+          ]
+        },
+        "to": {
+          "enum": [
+            "public",
+            "friends",
+            "close_friends",
+            "only_me"
+          ]
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "id": "e0e0e0e0-0000-4000-8000-000000000004",
+      "type": "content.post.audience_changed.v1",
+      "occurred_at": "2026-11-20T09:15:00Z",
+      "aggregate": {
+        "type": "post",
+        "id": "see-data"
+      },
+      "data": {
+        "post_id": "0b9a3c2e-5f1d-4e2a-8f00-000000000101",
+        "author_id": "6f2b6a0e-1d0c-4c3a-9a51-2b1f1f1f0001",
+        "from": "public",
+        "to": "friends"
+      }
+    }
+  ]
+}

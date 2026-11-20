@@ -1,0 +1,2314 @@
+openapi: 3.1.0
+info:
+  title: Sangam API
+  version: 0.1.0
+  summary: Trust-first social and civic network for India.
+  description: |
+    Stage E contract for the Sangam modular monolith. One API surface, organised by bounded context
+    (tags). Conventions:
+
+    * Auth: opaque bearer session token issued after a WebAuthn passkey ceremony.
+    * Errors: RFC 9457 `application/problem+json`.
+    * Pagination: cursor based (`cursor`, `limit`); responses carry `next_cursor` (null at the end).
+    * Writes that create resources accept an `Idempotency-Key` header and replay the first response.
+    * Visibility: every read of a post goes through one server-side policy check (audience + blocks),
+      including feeds, search, shares and community views.
+    * Civic and Ombudsman state changes are expressed as actions (`POST .../actions`), never as a PATCH of
+      `state`. Allowed transitions are defined in `contracts/state-machines/*.json`.
+  license:
+    name: Proprietary
+    identifier: LicenseRef-Proprietary
+servers:
+  - url: https://api.sangam.example/v1
+    description: Placeholder; no environment exists yet.
+security:
+  - session: []
+tags:
+  - name: Auth
+    description: Passkey registration and sign-in, sessions.
+  - name: Accounts
+    description: Your account, privacy settings and public profiles.
+  - name: Graph
+    description: Friends, follows, close friends, blocks and mutes.
+  - name: Media
+    description: Resumable uploads and media assets.
+  - name: Posts
+    description: Posts, comments, reactions, polls, saves and drafts.
+  - name: Feed
+    description: For You, Friends and Following feeds and feed controls.
+  - name: Communities
+    description: Communities, membership, events and RSVPs.
+  - name: Messaging
+    description: Direct and group conversations and message requests.
+  - name: Notifications
+    description: In-app notifications.
+  - name: Search
+    description: Search across people, posts, communities and tags.
+  - name: Trust
+    description: Reports, moderation decisions and appeals.
+  - name: Civic
+    description: Sangam Civic complaints, evidence, public issues and accountability. Not a government channel.
+  - name: Ombudsman
+    description: Independent review of how the platform treated you. Not a statutory office.
+
+paths:
+  # ---------------------------------------------------------------- Auth
+  /auth/passkeys/registration-options:
+    post:
+      tags: [Auth]
+      operationId: getPasskeyRegistrationOptions
+      summary: Start passkey registration for a new account
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [handle, display_name]
+              properties:
+                handle: { $ref: '#/components/schemas/Handle' }
+                display_name: { $ref: '#/components/schemas/DisplayName' }
+      responses:
+        '200':
+          description: WebAuthn PublicKeyCredentialCreationOptions (JSON encoded).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WebAuthnOptions' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Invalid' }
+  /auth/passkeys/register:
+    post:
+      tags: [Auth]
+      operationId: registerPasskey
+      summary: Finish passkey registration and create the account and a session
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WebAuthnCredential' }
+      responses:
+        '201':
+          description: Account created and signed in.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Session' }
+        '422': { $ref: '#/components/responses/Invalid' }
+  /auth/passkeys/login-options:
+    post:
+      tags: [Auth]
+      operationId: getPasskeyLoginOptions
+      summary: Start passkey sign-in
+      security: []
+      responses:
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '200':
+          description: WebAuthn PublicKeyCredentialRequestOptions (JSON encoded).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WebAuthnOptions' }
+  /auth/passkeys/login:
+    post:
+      tags: [Auth]
+      operationId: loginWithPasskey
+      summary: Finish passkey sign-in
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WebAuthnCredential' }
+      responses:
+        '200':
+          description: Signed in.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Session' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /auth/sessions/current:
+    delete:
+      tags: [Auth]
+      operationId: signOut
+      summary: Revoke the current session
+      responses:
+        '204': { description: Signed out. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  # ---------------------------------------------------------------- Accounts
+  /me:
+    get:
+      tags: [Accounts]
+      operationId: getMe
+      summary: The signed-in account, with privacy settings
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Me' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    patch:
+      tags: [Accounts]
+      operationId: updateMe
+      summary: Update display name, bio or interface language
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              additionalProperties: false
+              properties:
+                display_name: { $ref: '#/components/schemas/DisplayName' }
+                bio: { type: string, maxLength: 160 }
+                ui_lang: { $ref: '#/components/schemas/Lang' }
+      responses:
+        '200':
+          description: Updated.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Me' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/Invalid' }
+  /me/privacy:
+    put:
+      tags: [Accounts]
+      operationId: updatePrivacy
+      summary: Replace privacy settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PrivacySettings' }
+      responses:
+        '200':
+          description: Updated.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PrivacySettings' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/Invalid' }
+  /accounts/{handle}:
+    get:
+      tags: [Accounts]
+      operationId: getAccount
+      summary: A public profile and your relationship to it
+      parameters:
+        - $ref: '#/components/parameters/HandlePath'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Profile' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /accounts/{handle}/posts:
+    get:
+      tags: [Accounts, Posts]
+      operationId: listAccountPosts
+      summary: Posts by an account that you are allowed to see
+      parameters:
+        - $ref: '#/components/parameters/HandlePath'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PostPage' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ---------------------------------------------------------------- Graph
+  /me/friend-requests:
+    get:
+      tags: [Graph]
+      operationId: listFriendRequests
+      summary: Pending friend requests sent to or by you
+      parameters:
+        - name: direction
+          in: query
+          required: true
+          schema: { type: string, enum: [incoming, outgoing] }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/FriendRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [Graph]
+      operationId: sendFriendRequest
+      summary: Send a friend request
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [to_account_id]
+              properties:
+                to_account_id: { $ref: '#/components/schemas/Id' }
+      responses:
+        '201':
+          description: Sent.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FriendRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /me/friend-requests/{id}:
+    patch:
+      tags: [Graph]
+      operationId: respondToFriendRequest
+      summary: Accept, decline or cancel a friend request
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [accepted, declined, cancelled] }
+      responses:
+        '200':
+          description: Updated.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FriendRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /me/friends/{accountId}:
+    delete:
+      tags: [Graph]
+      operationId: removeFriend
+      summary: Remove a friend
+      parameters:
+        - $ref: '#/components/parameters/AccountIdPath'
+      responses:
+        '204': { description: Removed. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /me/{relation}/{accountId}:
+    put:
+      tags: [Graph]
+      operationId: addRelation
+      summary: Follow, add to close friends, block or mute an account
+      description: Blocking also removes friendship, follows and close-friend entries in both directions. Mutes are never visible to the muted account.
+      parameters:
+        - $ref: '#/components/parameters/Relation'
+        - $ref: '#/components/parameters/AccountIdPath'
+      responses:
+        '204': { description: Added (idempotent). }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Graph]
+      operationId: removeRelation
+      summary: Undo a follow, close-friend entry, block or mute
+      parameters:
+        - $ref: '#/components/parameters/Relation'
+        - $ref: '#/components/parameters/AccountIdPath'
+      responses:
+        '204': { description: Removed (idempotent). }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /me/{relation}:
+    get:
+      tags: [Graph]
+      operationId: listRelation
+      summary: List accounts you follow, keep as close friends, blocked or muted
+      parameters:
+        - $ref: '#/components/parameters/Relation'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AccountPage' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  # ---------------------------------------------------------------- Media
+  /media/uploads:
+    post:
+      tags: [Media]
+      operationId: createUploadSession
+      summary: Start a resumable upload
+      description: The client declares the size and SHA-256 up front; the server rejects a completed upload whose hash differs.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [byte_size, sha256, mime_type]
+              properties:
+                byte_size: { type: integer, minimum: 1, maximum: 2147483648 }
+                sha256: { $ref: '#/components/schemas/Sha256' }
+                mime_type: { type: string, examples: [image/jpeg] }
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UploadSession' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/Invalid' }
+  /media/uploads/{id}:
+    patch:
+      tags: [Media]
+      operationId: appendUploadChunk
+      summary: Append bytes at an offset
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+        - name: Upload-Offset
+          in: header
+          required: true
+          schema: { type: integer, minimum: 0 }
+      requestBody:
+        required: true
+        content:
+          application/offset+octet-stream:
+            schema: { type: string, contentEncoding: binary }
+      responses:
+        '200':
+          description: Chunk stored. When complete, `asset` is set and scanning starts.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UploadSession' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+    get:
+      tags: [Media]
+      operationId: getUploadSession
+      summary: Current offset, for resuming
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UploadSession' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /media/assets/{id}:
+    patch:
+      tags: [Media]
+      operationId: updateAsset
+      summary: Set alt text
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [alt_text]
+              properties:
+                alt_text: { type: string, maxLength: 1000 }
+      responses:
+        '200':
+          description: Updated.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Asset' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ---------------------------------------------------------------- Posts
+  /posts:
+    post:
+      tags: [Posts]
+      operationId: createPost
+      summary: Create a post; it is screened before it publishes
+      description: |
+        `publish: false` saves a draft. With `publish: true` the post passes pre-publish screening:
+        `allow` publishes it (201); `request_revision` returns 422 with the reason and nothing is
+        published; the author may then resend with `request_human_review: true`, which holds the post
+        for a person to decide (202). Nothing is ever published or rejected silently.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PostInput' }
+      responses:
+        '201':
+          description: Published or saved as a draft.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Post' }
+        '202':
+          description: Held for human review. A moderation decision is created and linked.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HeldPost' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422':
+          description: Validation failed, or screening asks for a revision.
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/Problem'
+                  - $ref: '#/components/schemas/ScreeningProblem'
+  /posts/{id}:
+    get:
+      tags: [Posts]
+      operationId: getPost
+      summary: One post, if its audience includes you
+      description: Returns 404 (not 403) when the audience excludes you, so existence is not revealed.
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Post' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Posts]
+      operationId: editPost
+      summary: Edit text or audience; creates a revision and is screened again
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              properties:
+                body: { type: string, maxLength: 5000 }
+                audience: { $ref: '#/components/schemas/Audience' }
+      responses:
+        '200':
+          description: Updated.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Post' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422':
+          description: Screening asks for a revision.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ScreeningProblem' }
+    delete:
+      tags: [Posts]
+      operationId: deletePost
+      summary: Delete your post
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '204': { description: Deleted. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /posts/{id}/comments:
+    get:
+      tags: [Posts]
+      operationId: listComments
+      summary: Visible comments on a post you can see
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, next_cursor]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Comment' }
+                  next_cursor: { $ref: '#/components/schemas/NextCursor' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Posts]
+      operationId: createComment
+      summary: Comment; screened before it appears
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body: { type: string, minLength: 1, maxLength: 1000 }
+                parent_id: { $ref: '#/components/schemas/Id' }
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Comment' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422':
+          description: Screening asks for a revision.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ScreeningProblem' }
+  /posts/{id}/reaction:
+    put:
+      tags: [Posts]
+      operationId: likePost
+      summary: Like a post (idempotent)
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '204': { description: Liked. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Posts]
+      operationId: unlikePost
+      summary: Remove your like
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '204': { description: Removed. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /posts/{id}/save:
+    put:
+      tags: [Posts]
+      operationId: savePost
+      summary: Save a post; only you can see your saves
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '204': { description: Saved. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Posts]
+      operationId: unsavePost
+      summary: Remove from saved
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '204': { description: Removed. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /posts/{id}/poll/vote:
+    put:
+      tags: [Posts]
+      operationId: votePoll
+      summary: Vote in a poll (one vote per account)
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [option]
+              properties:
+                option: { type: integer, minimum: 0, maximum: 3 }
+      responses:
+        '200':
+          description: Vote recorded; returns results.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Poll' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /me/saved:
+    get:
+      tags: [Posts]
+      operationId: listSaved
+      summary: Your saved posts that are still visible to you
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PostPage' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /me/drafts:
+    get:
+      tags: [Posts]
+      operationId: listDrafts
+      summary: Your drafts
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PostPage' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  # ---------------------------------------------------------------- Feed
+  /feed:
+    get:
+      tags: [Feed]
+      operationId: getFeed
+      summary: Home feed
+      description: |
+        `for_you` is ranked and labels every recommendation with `why`. `friends` shows only confirmed friends.
+        `following` is strictly reverse-chronological by publish time, with no ranking.
+        Audience and blocks are re-checked at serve time, including for cached candidates.
+      parameters:
+        - name: mode
+          in: query
+          required: true
+          schema: { type: string, enum: [for_you, friends, following] }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FeedPage' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /feed/signals:
+    post:
+      tags: [Feed]
+      operationId: addFeedSignal
+      summary: Not interested in a post, or show less from an author
+      description: Takes effect on the next feed load and is reversible.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FeedSignal' }
+      responses:
+        '204': { description: Recorded. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    delete:
+      tags: [Feed]
+      operationId: resetFeedSignals
+      summary: Reset recommendations (clears Not interested, Show less and ranking likes)
+      responses:
+        '204': { description: Reset. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  # ---------------------------------------------------------------- Communities
+  /communities:
+    get:
+      tags: [Communities]
+      operationId: listCommunities
+      summary: Communities you belong to, or discovery
+      parameters:
+        - name: filter
+          in: query
+          schema: { type: string, enum: [mine, discover], default: discover }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, next_cursor]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Community' }
+                  next_cursor: { $ref: '#/components/schemas/NextCursor' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /communities/{id}:
+    get:
+      tags: [Communities]
+      operationId: getCommunity
+      summary: A community, its rules and your membership
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Community' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /communities/{id}/membership:
+    put:
+      tags: [Communities]
+      operationId: joinCommunity
+      summary: Join a public community, or request to join a private one
+      description: Private communities never approve automatically; the response is `requested` until an admin approves.
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: Membership after the request.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Membership' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Communities]
+      operationId: leaveCommunity
+      summary: Leave, or cancel a pending request
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '204': { description: Left. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /communities/{id}/posts:
+    get:
+      tags: [Communities, Posts]
+      operationId: listCommunityPosts
+      summary: Community feed; members only for private communities
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PostPage' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /communities/{id}/events:
+    get:
+      tags: [Communities]
+      operationId: listCommunityEvents
+      summary: Upcoming events
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/CommunityEvent' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /events/{id}/rsvp:
+    put:
+      tags: [Communities]
+      operationId: rsvpEvent
+      summary: Set your RSVP
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [response]
+              properties:
+                response: { type: string, enum: [going, interested] }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CommunityEvent' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    delete:
+      tags: [Communities]
+      operationId: clearRsvp
+      summary: Clear your RSVP
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '204': { description: Cleared. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  # ---------------------------------------------------------------- Messaging
+  /conversations:
+    get:
+      tags: [Messaging]
+      operationId: listConversations
+      summary: Your conversations, newest activity first
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, next_cursor]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Conversation' }
+                  next_cursor: { $ref: '#/components/schemas/NextCursor' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [Messaging]
+      operationId: startConversation
+      summary: Start a direct conversation, or send a message request
+      description: If the recipient only accepts messages from friends and you are not one, a message request is created instead (202).
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [to_account_id, first_message]
+              properties:
+                to_account_id: { $ref: '#/components/schemas/Id' }
+                first_message: { $ref: '#/components/schemas/MessageInput' }
+      responses:
+        '201':
+          description: Conversation started.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Conversation' }
+        '202':
+          description: Sent as a message request.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MessageRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /conversations/{id}/messages:
+    get:
+      tags: [Messaging]
+      operationId: listMessages
+      summary: Messages in order; page backwards with `before_seq`
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+        - name: before_seq
+          in: query
+          schema: { type: integer, minimum: 1 }
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Message' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Messaging]
+      operationId: sendMessage
+      summary: Send a message; the server assigns the per-conversation sequence number
+      description: '`client_msg_id` makes retries safe: resending the same id returns the original message.'
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MessageInput' }
+      responses:
+        '201':
+          description: Stored.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Message' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /conversations/{id}/read:
+    put:
+      tags: [Messaging]
+      operationId: markRead
+      summary: Mark read up to a sequence number
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [seq]
+              properties:
+                seq: { type: integer, minimum: 0 }
+      responses:
+        '204': { description: Updated. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /message-requests:
+    get:
+      tags: [Messaging]
+      operationId: listMessageRequests
+      summary: Pending requests to you; the sender cannot see whether you read them
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/MessageRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /message-requests/{id}:
+    patch:
+      tags: [Messaging]
+      operationId: respondToMessageRequest
+      summary: Accept, delete, or block the sender
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [accepted, deleted, blocked] }
+      responses:
+        '200':
+          description: Updated; when accepted, includes the new conversation id.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MessageRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ---------------------------------------------------------------- Notifications
+  /notifications:
+    get:
+      tags: [Notifications]
+      operationId: listNotifications
+      summary: Your notifications, newest first
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, next_cursor, unread_count]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Notification' }
+                  next_cursor: { $ref: '#/components/schemas/NextCursor' }
+                  unread_count: { type: integer, minimum: 0 }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /notifications/{id}/read:
+    put:
+      tags: [Notifications]
+      operationId: markNotificationRead
+      summary: Mark one notification read
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '204': { description: Updated. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  # ---------------------------------------------------------------- Search
+  /search:
+    get:
+      tags: [Search]
+      operationId: search
+      summary: Search people, posts, communities and tags across launch languages
+      description: Post results pass the same visibility check as feeds; blocked accounts never appear.
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 200 }
+        - name: type
+          in: query
+          schema: { type: string, enum: [all, people, posts, communities, tags], default: all }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SearchResults' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  # ---------------------------------------------------------------- Trust
+  /reports:
+    post:
+      tags: [Trust]
+      operationId: createReport
+      summary: Report content or an account; confidential
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReportInput' }
+      responses:
+        '201':
+          description: Received.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Report' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/Invalid' }
+  /me/reports:
+    get:
+      tags: [Trust]
+      operationId: listMyReports
+      summary: Reports you have made and their status
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Report' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /me/decisions:
+    get:
+      tags: [Trust]
+      operationId: listMyDecisions
+      summary: Moderation decisions about your content or account
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Decision' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /decisions/{id}:
+    get:
+      tags: [Trust]
+      operationId: getDecision
+      summary: A decision page - what was actioned, the rule, who or what decided, history
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Decision' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /decisions/{id}/appeal:
+    post:
+      tags: [Trust]
+      operationId: appealDecision
+      summary: Appeal a decision; a human reviewer decides
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 10, maxLength: 500 }
+      responses:
+        '201':
+          description: Appeal submitted.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Decision' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Invalid' }
+
+  # ---------------------------------------------------------------- Civic
+  /civic/categories:
+    get:
+      tags: [Civic]
+      operationId: listCivicCategories
+      summary: Complaint categories
+      security: []
+      responses:
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [code, label]
+                      properties:
+                        code: { $ref: '#/components/schemas/CivicCategory' }
+                        label: { type: string }
+  /civic/cases:
+    get:
+      tags: [Civic]
+      operationId: listMyCases
+      summary: Your complaints, including drafts
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, next_cursor]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/CivicCaseSummary' }
+                  next_cursor: { $ref: '#/components/schemas/NextCursor' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [Civic]
+      operationId: createCaseDraft
+      summary: Create a complaint draft
+      description: Cases start as DRAFT. Submitting is the `submit` action, which requires `accuracy_confirmed`.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CivicCaseInput' }
+      responses:
+        '201':
+          description: Draft created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CivicCase' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422':
+          description: Validation failed, or screening asks for a revision (for example a named private individual or a phone number).
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/Problem'
+                  - $ref: '#/components/schemas/ScreeningProblem'
+  /civic/cases/{id}:
+    get:
+      tags: [Civic]
+      operationId: getCase
+      summary: A complaint you filed, with its timeline and evidence metadata
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CivicCase' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Civic]
+      operationId: updateCaseDraft
+      summary: Edit a draft (DRAFT state only)
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CivicCaseInput' }
+      responses:
+        '200':
+          description: Updated.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CivicCase' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /civic/cases/{id}/actions:
+    post:
+      tags: [Civic]
+      operationId: actOnCase
+      summary: Complainant actions - submit, confirm, escalate, reopen, withdraw
+      description: |
+        Only the complainant actions from `state-machines/civic.json` are available here. Staff and
+        authority steps go through the staff API (not in this public contract). A transition that the
+        state machine does not allow returns 409 with `allowed_actions`.
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CivicComplainantAction' }
+      responses:
+        '200':
+          description: Applied. Returns the case after the transition.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CivicCase' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Not allowed from the current state.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/TransitionProblem' }
+  /civic/cases/{id}/evidence:
+    post:
+      tags: [Civic]
+      operationId: attachEvidence
+      summary: Attach an uploaded file as evidence
+      description: The server recomputes the SHA-256 of the stored original and rejects a mismatch. Originals go to restricted storage; the public sees only a reviewed, redacted derivative.
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [upload_id]
+              properties:
+                upload_id: { $ref: '#/components/schemas/Id' }
+                replaces_evidence_id: { $ref: '#/components/schemas/Id' }
+      responses:
+        '201':
+          description: Attached.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Evidence' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Invalid' }
+  /civic/issues:
+    get:
+      tags: [Civic]
+      operationId: listIssues
+      summary: Public issue summaries near a ward
+      description: Public summaries only. Complainant identities and original evidence are never included.
+      parameters:
+        - name: ward
+          in: query
+          schema: { type: string }
+        - name: category
+          in: query
+          schema: { $ref: '#/components/schemas/CivicCategory' }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, next_cursor]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/CivicIssue' }
+                  next_cursor: { $ref: '#/components/schemas/NextCursor' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /civic/issues/{id}:
+    get:
+      tags: [Civic]
+      operationId: getIssue
+      summary: One public issue
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CivicIssue' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /civic/issues/{id}/support:
+    put:
+      tags: [Civic]
+      operationId: supportIssue
+      summary: Mark yourself as affected too
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '204': { description: Recorded. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Civic]
+      operationId: unsupportIssue
+      summary: Remove your support
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '204': { description: Removed. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /civic/accountability:
+    get:
+      tags: [Civic]
+      operationId: getAccountability
+      summary: Public dashboard aggregates for the last 90 days
+      description: An acknowledgement counts only when verified through an official channel. Coverage is limited to complaints filed through Sangam.
+      security: []
+      parameters:
+        - name: ward
+          in: query
+          schema: { type: string }
+      responses:
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Accountability' }
+
+  # ---------------------------------------------------------------- Ombudsman
+  /ombudsman/cases:
+    get:
+      tags: [Ombudsman]
+      operationId: listOmbudsmanCases
+      summary: Your Ombudsman complaints
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/OmbudsmanCase' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [Ombudsman]
+      operationId: fileOmbudsmanComplaint
+      summary: File a complaint about how the platform treated you
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type, description]
+              properties:
+                type: { $ref: '#/components/schemas/OmbudsmanType' }
+                description: { type: string, minLength: 20, maxLength: 800 }
+                subject_decision_id: { $ref: '#/components/schemas/Id' }
+                subject_civic_case_id: { $ref: '#/components/schemas/Id' }
+      responses:
+        '201':
+          description: Received.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OmbudsmanCase' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/Invalid' }
+  /ombudsman/cases/{id}:
+    get:
+      tags: [Ombudsman]
+      operationId: getOmbudsmanCase
+      summary: One Ombudsman case with its timeline, findings and corrective actions
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OmbudsmanCase' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /ombudsman/cases/{id}/withdraw:
+    post:
+      tags: [Ombudsman]
+      operationId: withdrawOmbudsmanCase
+      summary: Withdraw before findings are issued
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: Withdrawn (state CLOSED).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OmbudsmanCase' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Not allowed from the current state.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/TransitionProblem' }
+  /ombudsman/transparency:
+    get:
+      tags: [Ombudsman]
+      operationId: getOmbudsmanTransparency
+      summary: Aggregate transparency report (counts only)
+      security: []
+      responses:
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [type, quarter, cases, upheld, corrective_actions]
+                      properties:
+                        type: { $ref: '#/components/schemas/OmbudsmanType' }
+                        quarter: { type: string, pattern: '^[0-9]{4}-Q[1-4]$' }
+                        cases: { type: integer, minimum: 0 }
+                        upheld: { type: integer, minimum: 0 }
+                        corrective_actions: { type: integer, minimum: 0 }
+
+components:
+  securitySchemes:
+    session:
+      type: http
+      scheme: bearer
+      description: Opaque session token from passkey sign-in. Stored server-side only as a SHA-256 hash.
+
+  parameters:
+    IdPath:
+      name: id
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/Id' }
+    AccountIdPath:
+      name: accountId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/Id' }
+    HandlePath:
+      name: handle
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/Handle' }
+    Relation:
+      name: relation
+      in: path
+      required: true
+      schema: { type: string, enum: [following, close-friends, blocked, muted] }
+    Cursor:
+      name: cursor
+      in: query
+      schema: { type: string, maxLength: 512 }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      schema: { type: string, minLength: 8, maxLength: 128 }
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid session.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Forbidden:
+      description: Signed in, but not allowed.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    NotFound:
+      description: Does not exist, or is not visible to you.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Conflict:
+      description: Conflicts with the current state.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    RateLimited:
+      description: Too many requests; retry after the Retry-After header.
+      headers:
+        Retry-After:
+          schema: { type: integer, minimum: 1 }
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Invalid:
+      description: Request failed validation.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+
+  schemas:
+    # ---------- primitives
+    Id: { type: string, format: uuid }
+    Timestamp: { type: string, format: date-time }
+    NextCursor: { type: [string, 'null'] }
+    Handle: { type: string, pattern: '^[a-z0-9._]{3,30}$' }
+    DisplayName: { type: string, minLength: 2, maxLength: 40 }
+    Lang:
+      type: string
+      enum: [hi, te, ta, kn, ml, bn, mr, gu, pa, or, ur, en]
+      description: The twelve launch languages.
+    Audience: { type: string, enum: [public, friends, close_friends, only_me] }
+    Sha256: { type: string, pattern: '^[0-9a-f]{64}$' }
+
+    Problem:
+      type: object
+      description: RFC 9457 problem details.
+      required: [type, title, status]
+      properties:
+        type: { type: string, format: uri-reference }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string }
+        errors:
+          type: array
+          items:
+            type: object
+            required: [field, message]
+            properties:
+              field: { type: string }
+              message: { type: string }
+    ScreeningProblem:
+      description: Pre-publish screening asked for a revision. Always carries the reason and the human-review route.
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+        - type: object
+          required: [verdict, reason, policy, human_review_available]
+          properties:
+            verdict: { const: request_revision }
+            reason: { type: string, minLength: 1 }
+            policy: { $ref: '#/components/schemas/PolicyRef' }
+            human_review_available: { const: true }
+    TransitionProblem:
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+        - type: object
+          required: [current_state, allowed_actions]
+          properties:
+            current_state: { type: string }
+            allowed_actions:
+              type: array
+              items: { type: string }
+
+    # ---------- auth
+    WebAuthnOptions:
+      type: object
+      description: Server-generated WebAuthn options, opaque to this contract.
+      required: [challenge_id, public_key]
+      properties:
+        challenge_id: { $ref: '#/components/schemas/Id' }
+        public_key: { type: object, additionalProperties: true }
+    WebAuthnCredential:
+      type: object
+      required: [challenge_id, credential]
+      properties:
+        challenge_id: { $ref: '#/components/schemas/Id' }
+        credential: { type: object, additionalProperties: true, description: PublicKeyCredential serialised as JSON. }
+    Session:
+      type: object
+      required: [token, expires_at, account]
+      properties:
+        token: { type: string, description: Shown once. }
+        expires_at: { $ref: '#/components/schemas/Timestamp' }
+        account: { $ref: '#/components/schemas/AccountRef' }
+
+    # ---------- accounts
+    AccountRef:
+      type: object
+      required: [id, handle, display_name, verified]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        handle: { $ref: '#/components/schemas/Handle' }
+        display_name: { $ref: '#/components/schemas/DisplayName' }
+        verified: { type: boolean }
+        avatar_asset_id: { oneOf: [{ $ref: '#/components/schemas/Id' }, { type: 'null' }] }
+    PrivacySettings:
+      type: object
+      required: [default_audience, who_can_message, local_discovery, personalised_ranking]
+      additionalProperties: false
+      properties:
+        default_audience: { $ref: '#/components/schemas/Audience' }
+        who_can_message: { type: string, enum: [everyone, friends] }
+        local_discovery: { type: boolean }
+        personalised_ranking: { type: boolean }
+    Me:
+      allOf:
+        - $ref: '#/components/schemas/AccountRef'
+        - type: object
+          required: [bio, ui_lang, privacy, counts]
+          properties:
+            bio: { type: string }
+            ui_lang: { $ref: '#/components/schemas/Lang' }
+            privacy: { $ref: '#/components/schemas/PrivacySettings' }
+            counts: { $ref: '#/components/schemas/ProfileCounts' }
+    ProfileCounts:
+      type: object
+      required: [posts, friends, following]
+      properties:
+        posts: { type: integer, minimum: 0 }
+        friends: { type: integer, minimum: 0 }
+        following: { type: integer, minimum: 0 }
+    Relationship:
+      type: object
+      required: [friend, friend_request, following, close_friend, blocked, muted]
+      properties:
+        friend: { type: boolean }
+        friend_request: { type: string, enum: [none, outgoing, incoming] }
+        following: { type: boolean }
+        close_friend: { type: boolean }
+        blocked: { type: boolean }
+        muted: { type: boolean }
+    Profile:
+      allOf:
+        - $ref: '#/components/schemas/AccountRef'
+        - type: object
+          required: [bio, relationship]
+          properties:
+            bio: { type: string }
+            relationship: { $ref: '#/components/schemas/Relationship' }
+    AccountPage:
+      type: object
+      required: [items, next_cursor]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/AccountRef' }
+        next_cursor: { $ref: '#/components/schemas/NextCursor' }
+    FriendRequest:
+      type: object
+      required: [id, from, to, status, created_at]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        from: { $ref: '#/components/schemas/AccountRef' }
+        to: { $ref: '#/components/schemas/AccountRef' }
+        status: { type: string, enum: [pending, accepted, declined, cancelled] }
+        created_at: { $ref: '#/components/schemas/Timestamp' }
+
+    # ---------- media
+    UploadSession:
+      type: object
+      required: [id, byte_size, received_bytes, expires_at]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        byte_size: { type: integer }
+        received_bytes: { type: integer }
+        expires_at: { $ref: '#/components/schemas/Timestamp' }
+        asset: { oneOf: [{ $ref: '#/components/schemas/Asset' }, { type: 'null' }] }
+    Asset:
+      type: object
+      required: [id, kind, status, mime_type, byte_size, sha256]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        kind: { type: string, enum: [image, video, audio, document] }
+        status: { type: string, enum: [uploading, scanning, processing, ready, rejected, deleted] }
+        mime_type: { type: string }
+        byte_size: { type: integer }
+        sha256: { $ref: '#/components/schemas/Sha256' }
+        width: { type: integer }
+        height: { type: integer }
+        duration_ms: { type: integer }
+        alt_text: { type: [string, 'null'] }
+        url: { type: string, format: uri, description: Short-lived CDN URL; present when status is ready. }
+
+    # ---------- posts
+    PollInput:
+      type: object
+      required: [question, options]
+      properties:
+        question: { type: string, minLength: 1, maxLength: 200 }
+        options:
+          type: array
+          minItems: 2
+          maxItems: 4
+          items: { type: string, minLength: 1, maxLength: 80 }
+        closes_at: { $ref: '#/components/schemas/Timestamp' }
+    Poll:
+      type: object
+      required: [question, options, my_vote]
+      properties:
+        question: { type: string }
+        options:
+          type: array
+          items:
+            type: object
+            required: [label, votes]
+            properties:
+              label: { type: string }
+              votes: { type: integer, minimum: 0, description: Hidden (null) until you vote or the poll closes. }
+        my_vote: { type: [integer, 'null'] }
+        closes_at: { $ref: '#/components/schemas/Timestamp' }
+    PostInput:
+      type: object
+      required: [body, publish]
+      properties:
+        body: { type: string, maxLength: 5000 }
+        audience:
+          $ref: '#/components/schemas/Audience'
+          description: Defaults to your privacy default_audience (Friends unless changed).
+        lang: { $ref: '#/components/schemas/Lang' }
+        media:
+          type: array
+          maxItems: 10
+          items:
+            type: object
+            required: [asset_id]
+            properties:
+              asset_id: { $ref: '#/components/schemas/Id' }
+        poll: { $ref: '#/components/schemas/PollInput' }
+        community_id: { $ref: '#/components/schemas/Id' }
+        civic_issue_id: { $ref: '#/components/schemas/Id' }
+        publish: { type: boolean }
+        request_human_review:
+          type: boolean
+          default: false
+          description: Set after a request_revision verdict to hold the post for a person instead of editing it.
+    Post:
+      type: object
+      required: [id, author, audience, status, body, media, like_count, comment_count, liked, saved, created_at]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        author: { $ref: '#/components/schemas/AccountRef' }
+        audience: { $ref: '#/components/schemas/Audience' }
+        status: { type: string, enum: [draft, held_for_review, published] }
+        body: { type: string }
+        lang: { $ref: '#/components/schemas/Lang' }
+        media:
+          type: array
+          items: { $ref: '#/components/schemas/Asset' }
+        poll: { oneOf: [{ $ref: '#/components/schemas/Poll' }, { type: 'null' }] }
+        community_id: { oneOf: [{ $ref: '#/components/schemas/Id' }, { type: 'null' }] }
+        civic_issue_id: { oneOf: [{ $ref: '#/components/schemas/Id' }, { type: 'null' }] }
+        like_count: { type: integer, minimum: 0 }
+        comment_count: { type: integer, minimum: 0 }
+        liked: { type: boolean }
+        saved: { type: boolean }
+        created_at: { $ref: '#/components/schemas/Timestamp' }
+        published_at: { oneOf: [{ $ref: '#/components/schemas/Timestamp' }, { type: 'null' }] }
+    HeldPost:
+      type: object
+      required: [post, decision_id]
+      properties:
+        post: { $ref: '#/components/schemas/Post' }
+        decision_id: { $ref: '#/components/schemas/Id' }
+    PostPage:
+      type: object
+      required: [items, next_cursor]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Post' }
+        next_cursor: { $ref: '#/components/schemas/NextCursor' }
+    Comment:
+      type: object
+      required: [id, post_id, author, body, created_at]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        post_id: { $ref: '#/components/schemas/Id' }
+        parent_id: { oneOf: [{ $ref: '#/components/schemas/Id' }, { type: 'null' }] }
+        author: { $ref: '#/components/schemas/AccountRef' }
+        body: { type: string }
+        created_at: { $ref: '#/components/schemas/Timestamp' }
+
+    # ---------- feed
+    WhyThis:
+      type: object
+      description: Every For You item says why it is shown. Recommendations are labelled.
+      required: [reason, recommended]
+      properties:
+        reason: { type: string, enum: [friend, following, community, similar_to_liked, popular_nearby] }
+        recommended: { type: boolean }
+        explanation: { type: string, description: 'Localised sentence, for example: Popular in Navapur Readers, a community you joined.' }
+    FeedItem:
+      type: object
+      required: [post]
+      properties:
+        post: { $ref: '#/components/schemas/Post' }
+        why: { $ref: '#/components/schemas/WhyThis' }
+    FeedPage:
+      type: object
+      required: [mode, items, next_cursor]
+      properties:
+        mode: { type: string, enum: [for_you, friends, following] }
+        personalised: { type: boolean }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/FeedItem' }
+        next_cursor: { $ref: '#/components/schemas/NextCursor' }
+    FeedSignal:
+      oneOf:
+        - type: object
+          required: [kind, post_id]
+          properties:
+            kind: { const: not_interested }
+            post_id: { $ref: '#/components/schemas/Id' }
+        - type: object
+          required: [kind, author_id]
+          properties:
+            kind: { const: show_less }
+            author_id: { $ref: '#/components/schemas/Id' }
+
+    # ---------- communities
+    Membership:
+      type: object
+      required: [status, role]
+      properties:
+        status: { type: string, enum: [none, requested, active, banned] }
+        role: { type: [string, 'null'], enum: [owner, admin, moderator, member, null] }
+    Community:
+      type: object
+      required: [id, slug, name, description, privacy, member_count, membership]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        slug: { type: string }
+        name: { type: string }
+        description: { type: string }
+        privacy: { type: string, enum: [public, private] }
+        member_count: { type: integer, minimum: 0 }
+        membership: { $ref: '#/components/schemas/Membership' }
+        rules:
+          type: array
+          items: { type: string }
+    CommunityEvent:
+      type: object
+      required: [id, community_id, title, place, starts_at, my_rsvp]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        community_id: { $ref: '#/components/schemas/Id' }
+        title: { type: string }
+        description: { type: string }
+        place: { type: string }
+        starts_at: { $ref: '#/components/schemas/Timestamp' }
+        ends_at: { oneOf: [{ $ref: '#/components/schemas/Timestamp' }, { type: 'null' }] }
+        going_count: { type: integer, minimum: 0 }
+        my_rsvp: { type: [string, 'null'], enum: [going, interested, null] }
+
+    # ---------- messaging
+    MessageInput:
+      type: object
+      description: Exactly one of body or ciphertext. Which one applies depends on open decision 5 (end-to-end encryption).
+      required: [client_msg_id]
+      properties:
+        client_msg_id: { $ref: '#/components/schemas/Id' }
+        body: { type: string, minLength: 1, maxLength: 4000 }
+        ciphertext: { type: string, contentEncoding: base64 }
+        asset_id: { $ref: '#/components/schemas/Id' }
+      oneOf:
+        - required: [body]
+        - required: [ciphertext]
+    Message:
+      type: object
+      required: [id, conversation_id, seq, sender, created_at]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        conversation_id: { $ref: '#/components/schemas/Id' }
+        seq: { type: integer, minimum: 1 }
+        sender: { $ref: '#/components/schemas/AccountRef' }
+        client_msg_id: { $ref: '#/components/schemas/Id' }
+        body: { type: [string, 'null'] }
+        ciphertext: { type: [string, 'null'], contentEncoding: base64 }
+        asset: { oneOf: [{ $ref: '#/components/schemas/Asset' }, { type: 'null' }] }
+        created_at: { $ref: '#/components/schemas/Timestamp' }
+        deleted: { type: boolean }
+    Conversation:
+      type: object
+      required: [id, kind, participants, unread_count]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        kind: { type: string, enum: [direct, group] }
+        title: { type: [string, 'null'] }
+        participants:
+          type: array
+          items: { $ref: '#/components/schemas/AccountRef' }
+        last_message: { oneOf: [{ $ref: '#/components/schemas/Message' }, { type: 'null' }] }
+        unread_count: { type: integer, minimum: 0 }
+    MessageRequest:
+      type: object
+      required: [id, from, first_text, status, created_at]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        from: { $ref: '#/components/schemas/AccountRef' }
+        first_text: { type: string }
+        status: { type: string, enum: [pending, accepted, deleted, blocked] }
+        conversation_id: { oneOf: [{ $ref: '#/components/schemas/Id' }, { type: 'null' }] }
+        created_at: { $ref: '#/components/schemas/Timestamp' }
+
+    # ---------- notifications, search
+    Notification:
+      type: object
+      required: [id, kind, subject, text, read, created_at]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        kind:
+          type: string
+          enum: [civic_review_needed, civic_update, moderation_decision, appeal_decided, ombudsman_update, community_event, message_request, friend_request, mention, comment, reaction]
+        subject:
+          type: object
+          required: [kind, id]
+          properties:
+            kind: { type: string, enum: [post, comment, civic_case, decision, ombudsman_case, community, event, message_request, account] }
+            id: { $ref: '#/components/schemas/Id' }
+        text: { type: string, description: Localised to the account's ui_lang. }
+        read: { type: boolean }
+        created_at: { $ref: '#/components/schemas/Timestamp' }
+    SearchResults:
+      type: object
+      required: [people, posts, communities, tags, next_cursor]
+      properties:
+        people:
+          type: array
+          items: { $ref: '#/components/schemas/AccountRef' }
+        posts:
+          type: array
+          items: { $ref: '#/components/schemas/Post' }
+        communities:
+          type: array
+          items: { $ref: '#/components/schemas/Community' }
+        tags:
+          type: array
+          items: { type: string, pattern: '^#' }
+        next_cursor: { $ref: '#/components/schemas/NextCursor' }
+
+    # ---------- trust
+    PolicyRef:
+      type: object
+      required: [code, version, title]
+      properties:
+        code: { type: string }
+        version: { type: integer }
+        title: { type: string }
+        url: { type: string, format: uri }
+    ReportInput:
+      type: object
+      required: [target_kind, target_id, reason_code]
+      properties:
+        target_kind: { type: string, enum: [post, comment, message, account, community] }
+        target_id: { $ref: '#/components/schemas/Id' }
+        reason_code:
+          type: string
+          enum: [threat_or_violence, targeted_harassment, hateful_conduct, sexual_content, impersonation, scam_or_spam, private_information, other]
+        details: { type: string, maxLength: 400 }
+    Report:
+      allOf:
+        - $ref: '#/components/schemas/ReportInput'
+        - type: object
+          required: [id, status, created_at]
+          properties:
+            id: { $ref: '#/components/schemas/Id' }
+            status: { type: string, enum: [received, in_review, actioned, no_violation, closed] }
+            created_at: { $ref: '#/components/schemas/Timestamp' }
+    Decision:
+      type: object
+      description: The decision page. Always shows the rule and who or what decided.
+      required: [id, target_kind, target_id, action, status, policy, decided_by, history, appeal]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        target_kind: { type: string, enum: [post, comment, message, account, community, civic_case] }
+        target_id: { $ref: '#/components/schemas/Id' }
+        excerpt: { type: string, description: 'The actioned text, shown only to its author.' }
+        action: { type: string, enum: [hide, remove, hold, restrict_reach, suspend_account, restore, publish] }
+        status: { type: string, enum: [hidden, removed, held_for_review, appeal_submitted, restored_on_appeal, upheld_on_appeal, published_after_review] }
+        policy: { $ref: '#/components/schemas/PolicyRef' }
+        decided_by:
+          type: object
+          required: [kind, label]
+          properties:
+            kind: { type: string, enum: [automated, human] }
+            label: { type: string, examples: [Automated screening, Human reviewer] }
+        explanation: { type: string }
+        appeal:
+          oneOf:
+            - type: 'null'
+            - type: object
+              required: [status, created_at]
+              properties:
+                status: { type: string, enum: [submitted, in_review, upheld, reversed, withdrawn] }
+                reasoning: { type: [string, 'null'] }
+                created_at: { $ref: '#/components/schemas/Timestamp' }
+                decided_at: { oneOf: [{ $ref: '#/components/schemas/Timestamp' }, { type: 'null' }] }
+        can_appeal: { type: boolean }
+        ombudsman_available: { type: boolean }
+        history:
+          type: array
+          items:
+            type: object
+            required: [at, text]
+            properties:
+              at: { $ref: '#/components/schemas/Timestamp' }
+              text: { type: string }
+
+    # ---------- civic
+    CivicCategory:
+      type: string
+      enum: [roads, transport, water, sanitation, electricity, waste, healthcare, education, consumer_services, public_services, environment, public_safety]
+    CivicState:
+      type: string
+      enum: [DRAFT, SUBMITTED, TRIAGED, ROUTING_PENDING, ROUTED, ACKNOWLEDGED, IN_PROGRESS, RESPONSE_RECEIVED, RESOLUTION_REVIEW, RESOLVED, UNRESOLVED, CLOSED, WITHDRAWN, REJECTED, DUPLICATE, REOPENED]
+    CivicVisibility: { type: string, enum: [public_anonymous, public_named, private] }
+    CivicCaseInput:
+      type: object
+      properties:
+        category: { $ref: '#/components/schemas/CivicCategory' }
+        title: { type: string, minLength: 8, maxLength: 80 }
+        description: { type: string, minLength: 20, maxLength: 800 }
+        location_text: { type: string, minLength: 4, maxLength: 120 }
+        ward: { type: string }
+        latitude: { type: number, minimum: -90, maximum: 90 }
+        longitude: { type: number, minimum: -180, maximum: 180 }
+        visibility: { $ref: '#/components/schemas/CivicVisibility' }
+    CivicComplainantAction:
+      oneOf:
+        - type: object
+          required: [action, accuracy_confirmed]
+          properties:
+            action: { const: submit }
+            accuracy_confirmed: { const: true }
+        - type: object
+          required: [action]
+          properties:
+            action: { type: string, enum: [confirm_fixed, confirm_not_fixed, escalate, reopen, withdraw] }
+            note: { type: string, maxLength: 2000 }
+    CivicCaseSummary:
+      type: object
+      required: [id, ref, category, title, location_text, state, escalated, updated_at]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        ref: { type: string, pattern: '^SGM-C-[0-9]{4,}$' }
+        category: { $ref: '#/components/schemas/CivicCategory' }
+        title: { type: string }
+        location_text: { type: string }
+        state: { $ref: '#/components/schemas/CivicState' }
+        escalated: { type: boolean }
+        updated_at: { $ref: '#/components/schemas/Timestamp' }
+    Evidence:
+      type: object
+      description: Metadata only. Originals are never served through this API to anyone but the complainant.
+      required: [id, version, file_name, mime_type, byte_size, sha256, redacted_available, created_at]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        version: { type: integer, minimum: 1 }
+        replaces_id: { oneOf: [{ $ref: '#/components/schemas/Id' }, { type: 'null' }] }
+        file_name: { type: string }
+        mime_type: { type: string }
+        byte_size: { type: integer }
+        sha256: { $ref: '#/components/schemas/Sha256' }
+        redacted_available: { type: boolean }
+        created_at: { $ref: '#/components/schemas/Timestamp' }
+    CivicTimelineEntry:
+      type: object
+      required: [seq, action, from_state, actor_kind, actor_label, created_at]
+      properties:
+        seq: { type: integer, minimum: 1 }
+        action: { type: string }
+        from_state: { $ref: '#/components/schemas/CivicState' }
+        to_state: { oneOf: [{ $ref: '#/components/schemas/CivicState' }, { type: 'null' }] }
+        actor_kind:
+          type: string
+          enum: [complainant, platform, authority]
+          description: Shown as "Your statement", "Platform step" or "Official response".
+        actor_label: { type: string }
+        official_source:
+          oneOf:
+            - type: 'null'
+            - type: object
+              required: [authority, channel, reference, verified_at]
+              properties:
+                authority: { type: string }
+                channel: { type: string }
+                reference: { type: string }
+                verified_at: { $ref: '#/components/schemas/Timestamp' }
+        note: { type: [string, 'null'] }
+        created_at: { $ref: '#/components/schemas/Timestamp' }
+    CivicCase:
+      allOf:
+        - $ref: '#/components/schemas/CivicCaseSummary'
+        - type: object
+          required: [description, visibility, authority, evidence, timeline, allowed_actions]
+          properties:
+            description: { type: string }
+            ward: { type: [string, 'null'] }
+            visibility: { $ref: '#/components/schemas/CivicVisibility' }
+            authority:
+              oneOf:
+                - type: 'null'
+                - type: object
+                  required: [id, name, channel_kind]
+                  properties:
+                    id: { $ref: '#/components/schemas/Id' }
+                    name: { type: string }
+                    channel_kind: { type: string, enum: [official_integration, guided_handoff] }
+                    channel_url: { type: string, format: uri }
+            issue_id: { oneOf: [{ $ref: '#/components/schemas/Id' }, { type: 'null' }] }
+            evidence:
+              type: array
+              items: { $ref: '#/components/schemas/Evidence' }
+            timeline:
+              type: array
+              items: { $ref: '#/components/schemas/CivicTimelineEntry' }
+            allowed_actions:
+              type: array
+              description: Complainant actions currently allowed by the state machine.
+              items: { type: string, enum: [submit, confirm_fixed, confirm_not_fixed, escalate, reopen, withdraw] }
+    CivicIssue:
+      type: object
+      description: Public summary. No complainant identity, no original evidence.
+      required: [id, category, title, ward, state, affected_count, verified_acknowledgement, i_am_affected]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        category: { $ref: '#/components/schemas/CivicCategory' }
+        title: { type: string }
+        ward: { type: string }
+        state: { $ref: '#/components/schemas/CivicState' }
+        affected_count: { type: integer, minimum: 0 }
+        verified_acknowledgement: { type: boolean }
+        i_am_affected: { type: boolean }
+        my_case_id: { oneOf: [{ $ref: '#/components/schemas/Id' }, { type: 'null' }] }
+    Accountability:
+      type: object
+      required: [window_days, categories, coverage_note]
+      properties:
+        window_days: { const: 90 }
+        categories:
+          type: array
+          items:
+            type: object
+            required: [category, complaints, verified_acknowledgements, median_days_to_first_response]
+            properties:
+              category: { $ref: '#/components/schemas/CivicCategory' }
+              complaints: { type: integer, minimum: 0 }
+              verified_acknowledgements: { type: integer, minimum: 0 }
+              median_days_to_first_response: { type: [number, 'null'] }
+        coverage_note: { type: string }
+
+    # ---------- ombudsman
+    OmbudsmanType:
+      type: string
+      enum: [wrongful_suspension, moderation_decision, privacy, accessibility, impersonation, unresolved_support]
+    OmbudsmanCase:
+      type: object
+      required: [id, ref, type, description, state, timeline, created_at]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        ref: { type: string, pattern: '^SGM-O-[0-9]{4,}$' }
+        type: { $ref: '#/components/schemas/OmbudsmanType' }
+        description: { type: string }
+        state:
+          type: string
+          enum: [RECEIVED, CONFLICT_CHECK, ASSIGNED, UNDER_REVIEW, FINDINGS_ISSUED, CORRECTIVE_ACTION, CLOSED]
+        subject_decision_id: { oneOf: [{ $ref: '#/components/schemas/Id' }, { type: 'null' }] }
+        subject_civic_case_id: { oneOf: [{ $ref: '#/components/schemas/Id' }, { type: 'null' }] }
+        findings:
+          oneOf:
+            - type: 'null'
+            - type: object
+              required: [outcome, summary, issued_at]
+              properties:
+                outcome: { type: string, enum: [upheld, upheld_in_part, not_upheld] }
+                summary: { type: string }
+                issued_at: { $ref: '#/components/schemas/Timestamp' }
+        corrective_actions:
+          type: array
+          items:
+            type: object
+            required: [description, due_at, status]
+            properties:
+              description: { type: string }
+              due_at: { $ref: '#/components/schemas/Timestamp' }
+              status: { type: string, enum: [open, done, overdue, disputed] }
+        timeline:
+          type: array
+          items:
+            type: object
+            required: [seq, action, to_state, created_at]
+            properties:
+              seq: { type: integer, minimum: 1 }
+              action: { type: string }
+              to_state: { type: string }
+              note: { type: [string, 'null'] }
+              created_at: { $ref: '#/components/schemas/Timestamp' }
+        created_at: { $ref: '#/components/schemas/Timestamp' }

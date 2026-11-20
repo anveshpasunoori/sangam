@@ -1,0 +1,76 @@
+{
+  "events": [
+    {
+      "type": "identity.account.created.v1",
+      "aggregate": "account",
+      "schema": "identity.account.created.v1.schema.json",
+      "description": "An account was created."
+    },
+    {
+      "type": "graph.account.blocked.v1",
+      "aggregate": "account",
+      "schema": "graph.account.blocked.v1.schema.json",
+      "description": "An account blocked another. Consumers must drop cached feed candidates and conversations between the two."
+    },
+    {
+      "type": "content.post.published.v1",
+      "aggregate": "post",
+      "schema": "content.post.published.v1.schema.json",
+      "description": "A post passed screening and was published. Feed fan-out consumes this; it must still re-check visibility at serve time."
+    },
+    {
+      "type": "content.post.audience_changed.v1",
+      "aggregate": "post",
+      "schema": "content.post.audience_changed.v1.schema.json",
+      "description": "A post's audience changed. Caches and search must re-evaluate visibility."
+    },
+    {
+      "type": "content.post.deleted.v1",
+      "aggregate": "post",
+      "schema": "content.post.deleted.v1.schema.json",
+      "description": "A post was deleted by its author or removed. Consumers purge it from caches, search and CDN."
+    },
+    {
+      "type": "messaging.message.sent.v1",
+      "aggregate": "conversation",
+      "schema": "messaging.message.sent.v1.schema.json",
+      "description": "A message was stored. Metadata only: no body or ciphertext ever leaves the messaging context in events."
+    },
+    {
+      "type": "trust.screening.completed.v1",
+      "aggregate": "screening",
+      "schema": "trust.screening.completed.v1.schema.json",
+      "description": "Pre-publish screening produced a verdict. Feeds per-language precision and recall measurement."
+    },
+    {
+      "type": "trust.enforcement.applied.v1",
+      "aggregate": "enforcement",
+      "schema": "trust.enforcement.applied.v1.schema.json",
+      "description": "An enforcement action was recorded. Always names the policy and the kind of decider."
+    },
+    {
+      "type": "trust.appeal.decided.v1",
+      "aggregate": "appeal",
+      "schema": "trust.appeal.decided.v1.schema.json",
+      "description": "A human reviewer decided an appeal."
+    },
+    {
+      "type": "civic.case.transitioned.v1",
+      "aggregate": "civic_case",
+      "schema": "civic.case.transitioned.v1.schema.json",
+      "description": "A civic case event was recorded (a transition, or a side event such as escalate). Mirrors civic.case_events."
+    },
+    {
+      "type": "civic.evidence.added.v1",
+      "aggregate": "civic_case",
+      "schema": "civic.evidence.added.v1.schema.json",
+      "description": "Evidence was attached. Carries the hash, never the file or its storage key."
+    },
+    {
+      "type": "ombudsman.case.transitioned.v1",
+      "aggregate": "ombudsman_case",
+      "schema": "ombudsman.case.transitioned.v1.schema.json",
+      "description": "An Ombudsman case moved state. Consumed only by the Ombudsman deployment and the transparency report."
+    }
+  ]
+}

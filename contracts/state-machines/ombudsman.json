@@ -1,0 +1,25 @@
+{
+  "$comment": "Source of truth for the Platform Ombudsman case flow. Blueprint rules: independent assignment, conflicts check before assignment, findings, corrective-action tracking; the reviewer had no role in the original decision.",
+  "name": "ombudsman_case",
+  "initial": "RECEIVED",
+  "states": ["RECEIVED", "CONFLICT_CHECK", "ASSIGNED", "UNDER_REVIEW", "FINDINGS_ISSUED", "CORRECTIVE_ACTION", "CLOSED"],
+  "terminal": ["CLOSED"],
+  "actors": {
+    "complainant": "The person who filed the complaint.",
+    "ombudsman": "Ombudsman office staff, isolated from Trust and Safety staff."
+  },
+  "transitions": [
+    { "from": "RECEIVED", "to": "CONFLICT_CHECK", "action": "start_conflict_check", "actor": "ombudsman" },
+    { "from": "RECEIVED", "to": "CLOSED", "action": "decline_out_of_remit", "actor": "ombudsman" },
+    { "from": "CONFLICT_CHECK", "to": "ASSIGNED", "action": "assign", "actor": "ombudsman", "requires": "conflict_free_reviewer" },
+    { "from": "ASSIGNED", "to": "UNDER_REVIEW", "action": "start_review", "actor": "ombudsman" },
+    { "from": "UNDER_REVIEW", "to": "FINDINGS_ISSUED", "action": "issue_findings", "actor": "ombudsman" },
+    { "from": "FINDINGS_ISSUED", "to": "CORRECTIVE_ACTION", "action": "require_corrective_action", "actor": "ombudsman" },
+    { "from": "FINDINGS_ISSUED", "to": "CLOSED", "action": "close", "actor": "ombudsman" },
+    { "from": "CORRECTIVE_ACTION", "to": "CLOSED", "action": "close", "actor": "ombudsman" },
+    { "from": "RECEIVED", "to": "CLOSED", "action": "withdraw", "actor": "complainant" },
+    { "from": "CONFLICT_CHECK", "to": "CLOSED", "action": "withdraw", "actor": "complainant" },
+    { "from": "ASSIGNED", "to": "CLOSED", "action": "withdraw", "actor": "complainant" },
+    { "from": "UNDER_REVIEW", "to": "CLOSED", "action": "withdraw", "actor": "complainant" }
+  ]
+}

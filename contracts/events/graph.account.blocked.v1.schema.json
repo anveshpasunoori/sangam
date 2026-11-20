@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.sangam.example/events/graph.account.blocked.v1.schema.json",
+  "title": "graph.account.blocked.v1",
+  "description": "An account blocked another. Consumers must drop cached feed candidates and conversations between the two.",
+  "allOf": [
+    {
+      "$ref": "envelope.schema.json"
+    }
+  ],
+  "properties": {
+    "type": {
+      "const": "graph.account.blocked.v1"
+    },
+    "aggregate": {
+      "properties": {
+        "type": {
+          "const": "account"
+        }
+      }
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "blocker_id",
+        "blocked_id"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "blocker_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "blocked_id": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "id": "e0e0e0e0-0000-4000-8000-000000000002",
+      "type": "graph.account.blocked.v1",
+      "occurred_at": "2026-11-20T09:15:00Z",
+      "aggregate": {
+        "type": "account",
+        "id": "see-data"
+      },
+      "data": {
+        "blocker_id": "6f2b6a0e-1d0c-4c3a-9a51-2b1f1f1f0001",
+        "blocked_id": "6f2b6a0e-1d0c-4c3a-9a51-2b1f1f1f0002"
+      }
+    }
+  ]
+}

@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.sangam.example/events/ombudsman.case.transitioned.v1.schema.json",
+  "title": "ombudsman.case.transitioned.v1",
+  "description": "An Ombudsman case moved state. Consumed only by the Ombudsman deployment and the transparency report.",
+  "allOf": [
+    {
+      "$ref": "envelope.schema.json"
+    }
+  ],
+  "properties": {
+    "type": {
+      "const": "ombudsman.case.transitioned.v1"
+    },
+    "aggregate": {
+      "properties": {
+        "type": {
+          "const": "ombudsman_case"
+        }
+      }
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "case_id",
+        "ref",
+        "seq",
+        "action",
+        "from_state",
+        "to_state",
+        "actor_kind"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "case_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "ref": {
+          "type": "string",
+          "pattern": "^SGM-O-[0-9]{4,}$"
+        },
+        "seq": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "action": {
+          "enum": [
+            "assign",
+            "close",
+            "decline_out_of_remit",
+            "issue_findings",
+            "require_corrective_action",
+            "start_conflict_check",
+            "start_review",
+            "withdraw"
+          ]
+        },
+        "from_state": {
+          "enum": [
+            "RECEIVED",
+            "CONFLICT_CHECK",
+            "ASSIGNED",
+            "UNDER_REVIEW",
+            "FINDINGS_ISSUED",
+            "CORRECTIVE_ACTION",
+            "CLOSED"
+          ]
+        },
+        "to_state": {
+          "enum": [
+            "RECEIVED",
+            "CONFLICT_CHECK",
+            "ASSIGNED",
+            "UNDER_REVIEW",
+            "FINDINGS_ISSUED",
+            "CORRECTIVE_ACTION",
+            "CLOSED"
+          ]
+        },
+        "actor_kind": {
+          "enum": [
+            "complainant",
+            "ombudsman"
+          ]
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "id": "e0e0e0e0-0000-4000-8000-000000000012",
+      "type": "ombudsman.case.transitioned.v1",
+      "occurred_at": "2026-11-20T09:15:00Z",
+      "aggregate": {
+        "type": "ombudsman_case",
+        "id": "see-data"
+      },
+      "data": {
+        "case_id": "0d0d0d0d-0000-4000-8000-000000000701",
+        "ref": "SGM-O-0217",
+        "seq": 4,
+        "action": "start_review",
+        "from_state": "ASSIGNED",
+        "to_state": "UNDER_REVIEW",
+        "actor_kind": "ombudsman"
+      }
+    }
+  ]
+}

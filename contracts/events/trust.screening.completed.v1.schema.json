@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.sangam.example/events/trust.screening.completed.v1.schema.json",
+  "title": "trust.screening.completed.v1",
+  "description": "Pre-publish screening produced a verdict. Feeds per-language precision and recall measurement.",
+  "allOf": [
+    {
+      "$ref": "envelope.schema.json"
+    }
+  ],
+  "properties": {
+    "type": {
+      "const": "trust.screening.completed.v1"
+    },
+    "aggregate": {
+      "properties": {
+        "type": {
+          "const": "screening"
+        }
+      }
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "screening_id",
+        "target_kind",
+        "target_id",
+        "verdict",
+        "model_version"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "screening_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "target_kind": {
+          "enum": [
+            "post",
+            "comment",
+            "civic_case"
+          ]
+        },
+        "target_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "verdict": {
+          "enum": [
+            "allow",
+            "request_revision",
+            "hold_for_review",
+            "reject"
+          ]
+        },
+        "policy_code": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "lang": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "model_version": {
+          "type": "string"
+        }
+      },
+      "if": {
+        "properties": {
+          "verdict": {
+            "not": {
+              "const": "allow"
+            }
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "policy_code"
+        ],
+        "properties": {
+          "policy_code": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "id": "e0e0e0e0-0000-4000-8000-000000000007",
+      "type": "trust.screening.completed.v1",
+      "occurred_at": "2026-11-20T09:15:00Z",
+      "aggregate": {
+        "type": "screening",
+        "id": "see-data"
+      },
+      "data": {
+        "screening_id": "9e8d7c6b-0000-4000-8000-000000000301",
+        "target_kind": "post",
+        "target_id": "0b9a3c2e-5f1d-4e2a-8f00-000000000101",
+        "verdict": "request_revision",
+        "policy_code": "harassment",
+        "lang": "en",
+        "model_version": "keyword-rule-0.1"
+      }
+    }
+  ]
+}
