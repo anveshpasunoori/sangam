@@ -18,7 +18,11 @@ export default function ChatPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, chat?.unread]);
 
-  useEffect(() => endRef.current?.scrollIntoView({ block: "end" }), [chat?.messages.length]);
+  // Braces matter: newer browsers return a Promise from scrollIntoView, and an effect
+  // that returns a non-function makes React throw on unmount.
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ block: "end" });
+  }, [chat?.messages.length]);
 
   if (!chat || state.blocked.includes(chat.with))
     return (
